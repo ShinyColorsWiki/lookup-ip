@@ -22,13 +22,10 @@ def getIpHubData(addr: str):
         r.add_header('X-Key', os.environ.get("IPHUB_KEY"))
         try:
             response = json.loads(urlopen(r).read().decode('utf-8'))
-        except:
+        except Exception as e:
+            print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
             return None
         return response
-    except Exception as e:
-        print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
-        return None
-
     except Exception as e:
         print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
         return None
