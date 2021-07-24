@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -31,6 +32,7 @@ class bcolors:
     WARNING = '\033[93m'
     FAIL = '\033[91m'
     ENDC = '\033[0m'
+
 
 async def getIpHubData(addr: str):
     try:
@@ -47,6 +49,7 @@ async def getIpHubData(addr: str):
         print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
         return None
 
+
 async def getVPNAPIData(addr: str):
     try:
         url = f'https://vpnapi.io/api/{addr}?key={os.environ.get("VPNAPI_KEY")}'
@@ -61,9 +64,11 @@ async def getVPNAPIData(addr: str):
         print(f'{bcolors.FAIL}Error[VPNAPI]: {e} {bcolors.ENDC}')
         return None
 
+
 async def getProxyCheckData(addr: str):
     try:
-        key = f'?key={os.environ.get("PROXYCHECK_KEY")}' if os.environ.get("PROXYCHECK_KEY") is not None else ''
+        key = f'?key={os.environ.get("PROXYCHECK_KEY")}' if os.environ.get(
+            "PROXYCHECK_KEY") is not None else ''
         url = f'https://proxycheck.io/v2/{addr}{key}'
         r = Request(url)
         try:
@@ -79,16 +84,19 @@ async def getProxyCheckData(addr: str):
         print(f'{bcolors.FAIL}Error[ProxyCheck]: {e} {bcolors.ENDC}')
         return None
 
+
 async def lookupfromCymru(addr: str):
     try:
-        c = CymruClient() # init everytime on request due to bug in cymruclient.
+        # init everytime on request due to bug in cymruclient.
+        c = CymruClient()
         return c.lookup(addr)
     except Exception as e:
         print(f'{bcolors.FAIL}Error[Cymru]: {e} {bcolors.ENDC}')
         return None
 
+
 def getIPHubReputationColorized(rep):
-    if rep is None: 
+    if rep is None:
         return f'{bcolors.OKBLUE}UNKNOWN{bcolors.ENDC}'
     elif rep == 0:
         return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
@@ -99,6 +107,7 @@ def getIPHubReputationColorized(rep):
     else:
         return f'{bcolors.OKBLUE}UNKNOWN{bcolors.ENDC}'
 
+
 def getBoolColorized(isproxy):
     if isproxy:
         return f'{bcolors.FAIL}BAD{bcolors.ENDC}'
@@ -107,9 +116,13 @@ def getBoolColorized(isproxy):
     else:
         return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
 
+
 async def result(addr: str):
-    futures = [asyncio.create_task(i) for i in 
-        [lookupfromCymru(addr), getIpHubData(addr), getVPNAPIData(addr), getProxyCheckData(addr)]
+    futures = [
+        asyncio.create_task(i) for i in [
+            lookupfromCymru(addr), getIpHubData(addr),
+            getVPNAPIData(addr), getProxyCheckData(addr)
+        ]
     ]
     result = await asyncio.gather(*futures)
 
@@ -118,9 +131,10 @@ async def result(addr: str):
     vpnapi = getBoolColorized(result[2])
     proxycheck = getBoolColorized(result[3])
 
-    if result[0] is not None: #Cymru is must not be None.
+    if result[0] is not None:  # Cymru is must not be None.
         print(f'IP: {addr}')
-        print(f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
+        print(
+            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
         print(f'CIDR: {cymru.prefix}')
         asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
         print(f'Info: {asn} {cymru.owner}')
@@ -130,7 +144,8 @@ async def result(addr: str):
         print(f'Result was: {result}')
         print()
 
-async def loop_main(): 
+
+async def loop_main():
     while True:
         addr = input("Request: ").strip()
         if addr == "":
@@ -138,10 +153,14 @@ async def loop_main():
         print()
         await result(addr)
 
+
 async def main():
-    parser = argparse.ArgumentParser(description='Lookup IP Addresses with reputation.')
-    parser.add_argument('-a', '--addr', action='append', help='IP Address to lookup.')
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
+    parser = argparse.ArgumentParser(
+        description='Lookup IP Addresses with reputation.')
+    parser.add_argument('-a', '--addr', action='append',
+                        help='IP Address to lookup.')
+    parser.add_argument('-v', '--version', action='version',
+                        version='%(prog)s ' + __version__)
     args = parser.parse_args()
 
     if args.addr is None:
@@ -153,4 +172,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
