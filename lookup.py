@@ -6,7 +6,7 @@ The MIT License (MIT)
 Copyright (c) 2021 shinycolors.wiki
 """
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __author__ = 'MPThLee'
 __maintainer__ = 'MPThLee'
 __copyright__ = 'Copyright (c) 2021 shinycolors.wiki'
@@ -77,7 +77,7 @@ async def getProxyCheckData(addr: str):
             print(f'{bcolors.FAIL}Error[ProxyCheck]: {e} {bcolors.ENDC}')
             return None
         if response["status"] == "ok":
-            return response[addr]["type"] in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", "Shadowsocks", "OpenVPN", "VPN"]
+            return response[addr]["type"]
         else:
             return None
     except Exception as e:
@@ -129,12 +129,13 @@ async def result(addr: str):
     cymru = result[0]
     iphub = getIPHubReputationColorized(result[1])
     vpnapi = getBoolColorized(result[2])
-    proxycheck = getBoolColorized(result[3])
+    _proxycheck = proxycheck_type = result[3]
+    proxycheck = getBoolColorized(_proxycheck in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", "Shadowsocks", "Compromised Server", "Inference Engine", "OpenVPN", "VPN"])
 
     if result[0] is not None:  # Cymru is must not be None.
         print(f'IP: {addr}')
         print(
-            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
+            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck}[{proxycheck_type}] (ProxyCheck)')
         print(f'CIDR: {cymru.prefix}')
         asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
         print(f'Info: {asn} {cymru.owner}')
