@@ -1,6 +1,7 @@
 from urllib.request import Request, urlopen
 import json
 import os
+import asyncio
 
 from cymruwhois import Client as CymruClient
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-def getIpHubData(addr: str):
+async def getIpHubData(addr: str):
     try:
         url = f'http://v2.api.iphub.info/ip/{addr}'
         r = Request(url)
@@ -25,12 +26,44 @@ def getIpHubData(addr: str):
         except Exception as e:
             print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
             return None
-        return response
+        return response["block"]
     except Exception as e:
         print(f'{bcolors.FAIL}Error[IPHub]: {e} {bcolors.ENDC}')
         return None
 
-def lookupfromCymru(addr: str):
+async def getVPNAPIData(addr: str):
+    try:
+        url = f'https://vpnapi.io/api/{addr}?key={os.environ.get("VPNAPI_KEY")}'
+        r = Request(url)
+        try:
+            response = json.loads(urlopen(r).read().decode('utf-8'))
+        except Exception as e:
+            print(f'{bcolors.FAIL}Error[VPNAPI]: {e} {bcolors.ENDC}')
+            return None
+        return response["security"]["vpn"] or response["security"]["proxy"] or response["security"]["tor"]
+    except Exception as e:
+        print(f'{bcolors.FAIL}Error[VPNAPI]: {e} {bcolors.ENDC}')
+        return None
+
+async def getProxyCheckData(addr: str):
+    try:
+        key = f'?key={os.environ.get("PROXYCHECK_KEY")}' if os.environ.get("PROXYCHECK_KEY") is not None else ''
+        url = f'https://proxycheck.io/v2/{addr}{key}'
+        r = Request(url)
+        try:
+            response = json.loads(urlopen(r).read().decode('utf-8'))
+        except Exception as e:
+            print(f'{bcolors.FAIL}Error[ProxyCheck]: {e} {bcolors.ENDC}')
+            return None
+        if response["status"] == "ok":
+            return response[addr]["type"] in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", "Shadowsocks", "OpenVPN", "VPN"]
+        else:
+            return None
+    except Exception as e:
+        print(f'{bcolors.FAIL}Error[ProxyCheck]: {e} {bcolors.ENDC}')
+        return None
+
+async def lookupfromCymru(addr: str):
     try:
         c = CymruClient() # init everytime on request due to bug in cymruclient.
         return c.lookup(addr)
@@ -38,8 +71,10 @@ def lookupfromCymru(addr: str):
         print(f'{bcolors.FAIL}Error[Cymru]: {e} {bcolors.ENDC}')
         return None
 
-def getIPHubReputationColorized(rep: int):
-    if rep == 0:
+def getIPHubReputationColorized(rep):
+    if rep is None: 
+        return f'{bcolors.OKBLUE}UNKNOWN{bcolors.ENDC}'
+    elif rep == 0:
         return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
     elif rep == 1:
         return f'{bcolors.FAIL}BAD{bcolors.ENDC}'
@@ -48,24 +83,44 @@ def getIPHubReputationColorized(rep: int):
     else:
         return f'{bcolors.OKBLUE}UNKNOWN{bcolors.ENDC}'
 
-def main(): 
+def getBoolColorized(isproxy):
+    if isproxy:
+        return f'{bcolors.FAIL}BAD{bcolors.ENDC}'
+    elif isproxy is None:
+        return f'{bcolors.OKBLUE}UNKNOWN{bcolors.ENDC}'
+    else:
+        return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
+
+async def main(): 
     while True:
         addr = input("Request: ").strip()
-        iphub = getIpHubData(addr)
-        cymru = lookupfromCymru(addr)
-        if iphub is not None and cymru is not None:
+        if addr == "":
+            continue
+
+        futures = [asyncio.create_task(i) for i in 
+            [lookupfromCymru(addr), getIpHubData(addr), getVPNAPIData(addr), getProxyCheckData(addr)]
+        ]
+        result = await asyncio.gather(*futures)  
+
+        cymru = result[0]
+        iphub = getIPHubReputationColorized(result[1])
+        vpnapi = getBoolColorized(result[2])
+        proxycheck = getBoolColorized(result[3])
+
+        if result[0] is not None: #Cymru is must not be None.
             print()
             print(f'IP: {addr}')
-            print(f'Reputation: {getIPHubReputationColorized(iphub["block"])} (IPHub)')
+            print(f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
             print(f'CIDR: {cymru.prefix}')
             asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
             print(f'Info: {asn} {cymru.owner}')
             print()
         else:
-            print(f'{bcolors.FAIL}Error[main]: Failed to get data {bcolors.ENDC}')
-            print()
+            print(f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}')
+            print(f'Result was: {result}')
+            print('')
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
 
