@@ -1,7 +1,23 @@
+"""
+LookUp IP
+
+The MIT License (MIT)
+
+Copyright (c) 2021 shinycolors.wiki
+"""
+
+__version__ = '0.3.0'
+__author__ = 'MPThLee'
+__maintainer__ = 'MPThLee'
+__copyright__ = 'Copyright (c) 2021 shinycolors.wiki'
+__license__ = 'MIT'
+
+
 from urllib.request import Request, urlopen
+import asyncio
+import argparse
 import json
 import os
-import asyncio
 
 from cymruwhois import Client as CymruClient
 from dotenv import load_dotenv
@@ -91,34 +107,48 @@ def getBoolColorized(isproxy):
     else:
         return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
 
-async def main(): 
+async def result(addr: str):
+    futures = [asyncio.create_task(i) for i in 
+        [lookupfromCymru(addr), getIpHubData(addr), getVPNAPIData(addr), getProxyCheckData(addr)]
+    ]
+    result = await asyncio.gather(*futures)
+
+    cymru = result[0]
+    iphub = getIPHubReputationColorized(result[1])
+    vpnapi = getBoolColorized(result[2])
+    proxycheck = getBoolColorized(result[3])
+
+    if result[0] is not None: #Cymru is must not be None.
+        print(f'IP: {addr}')
+        print(f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
+        print(f'CIDR: {cymru.prefix}')
+        asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
+        print(f'Info: {asn} {cymru.owner}')
+        print()
+    else:
+        print(f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}')
+        print(f'Result was: {result}')
+        print()
+
+async def loop_main(): 
     while True:
         addr = input("Request: ").strip()
         if addr == "":
             continue
+        print()
+        await result(addr)
 
-        futures = [asyncio.create_task(i) for i in 
-            [lookupfromCymru(addr), getIpHubData(addr), getVPNAPIData(addr), getProxyCheckData(addr)]
-        ]
-        result = await asyncio.gather(*futures)  
+async def main():
+    parser = argparse.ArgumentParser(description='Lookup IP Addresses with reputation.')
+    parser.add_argument('-a', '--addr', action='append', help='IP Address to lookup.')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
+    args = parser.parse_args()
 
-        cymru = result[0]
-        iphub = getIPHubReputationColorized(result[1])
-        vpnapi = getBoolColorized(result[2])
-        proxycheck = getBoolColorized(result[3])
-
-        if result[0] is not None: #Cymru is must not be None.
-            print()
-            print(f'IP: {addr}')
-            print(f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck} (ProxyCheck)')
-            print(f'CIDR: {cymru.prefix}')
-            asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
-            print(f'Info: {asn} {cymru.owner}')
-            print()
-        else:
-            print(f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}')
-            print(f'Result was: {result}')
-            print('')
+    if args.addr is None:
+        await loop_main()
+    else:
+        for addr in args.addr:
+            await result(addr)
 
 
 if __name__ == '__main__':
