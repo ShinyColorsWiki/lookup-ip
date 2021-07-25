@@ -6,7 +6,7 @@ The MIT License (MIT)
 Copyright (c) 2021 shinycolors.wiki
 """
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 __author__ = 'MPThLee'
 __maintainer__ = 'MPThLee'
 __copyright__ = 'Copyright (c) 2021 shinycolors.wiki'
@@ -149,6 +149,9 @@ async def lookup(addr: str):
 async def loop_main():
     while True:
         addr = input("Request: ").strip()
+        if addr == "\x03" or addr == "\x04":
+            print("Bye!")
+            break
         if addr == "":
             continue
         print(await lookup(addr))
