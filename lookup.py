@@ -6,7 +6,7 @@ The MIT License (MIT)
 Copyright (c) 2021 shinycolors.wiki
 """
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 __author__ = 'MPThLee'
 __maintainer__ = 'MPThLee'
 __copyright__ = 'Copyright (c) 2021 shinycolors.wiki'
@@ -117,13 +117,11 @@ def getBoolColorized(isproxy):
         return f'{bcolors.OKGREEN}OK{bcolors.ENDC}'
 
 
-async def result(addr: str):
+async def lookup(addr: str):
     futures = [
-        asyncio.create_task(i) for i in [
             lookupfromCymru(addr), getIpHubData(addr),
             getVPNAPIData(addr), getProxyCheckData(addr)
         ]
-    ]
     result = await asyncio.gather(*futures)
 
     cymru = result[0]
@@ -133,26 +131,26 @@ async def result(addr: str):
     proxycheck = getBoolColorized(_proxycheck in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", "Shadowsocks", "Compromised Server", "Inference Engine", "OpenVPN", "VPN"])
 
     if result[0] is not None:  # Cymru is must not be None.
-        print(f'IP: {addr}')
-        print(
-            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck}[{proxycheck_type}] (ProxyCheck)')
-        print(f'CIDR: {cymru.prefix}')
         asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
-        print(f'Info: {asn} {cymru.owner}')
-        print()
+        return '\n'.join(['',
+            f'IP: {addr}',
+            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck}[{proxycheck_type}] (ProxyCheck)',
+            f'CIDR: {cymru.prefix}',
+            f'Info: {asn} {cymru.owner}',
+        ])
     else:
-        print(f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}')
-        print(f'Result was: {result}')
-        print()
-
+        return '\n'.join(['',
+            f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}',
+            f'Result was: {result}'
+        ])
 
 async def loop_main():
     while True:
         addr = input("Request: ").strip()
         if addr == "":
             continue
+        print(await lookup(addr))
         print()
-        await result(addr)
 
 
 async def main():
@@ -167,9 +165,13 @@ async def main():
     if args.addr is None:
         await loop_main()
     else:
-        for addr in args.addr:
-            await result(addr)
+        print("Getting data...")
+        futures = [lookup(addr) for addr in args.addr]
+        result = await asyncio.gather(*futures)
 
+        for r in result:
+            print(r)
+        print()
 
 if __name__ == '__main__':
     asyncio.run(main())
