@@ -156,10 +156,10 @@ async def loop_main():
 async def main():
     parser = argparse.ArgumentParser(
         description='Lookup IP Addresses with reputation.')
-    parser.add_argument('-a', '--addr', action='append',
-                        help='IP Address to lookup.')
     parser.add_argument('-v', '--version', action='version',
                         version='%(prog)s ' + __version__)
+    parser.add_argument('-a', '--addr', action='append',
+                        help='IP Address to lookup.')
     args = parser.parse_args()
 
     if args.addr is None:
