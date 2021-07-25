@@ -119,30 +119,32 @@ def getBoolColorized(isproxy):
 
 async def lookup(addr: str):
     futures = [
-            lookupfromCymru(addr), getIpHubData(addr),
-            getVPNAPIData(addr), getProxyCheckData(addr)
-        ]
+        lookupfromCymru(addr), getIpHubData(addr),
+        getVPNAPIData(addr), getProxyCheckData(addr)
+    ]
     result = await asyncio.gather(*futures)
 
     cymru = result[0]
     iphub = getIPHubReputationColorized(result[1])
     vpnapi = getBoolColorized(result[2])
     _proxycheck = proxycheck_type = result[3]
-    proxycheck = getBoolColorized(_proxycheck in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", "Shadowsocks", "Compromised Server", "Inference Engine", "OpenVPN", "VPN"])
+    proxycheck = getBoolColorized(_proxycheck in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", 
+                                  "Shadowsocks", "Compromised Server", "Inference Engine", "OpenVPN", "VPN"])
 
     if result[0] is not None:  # Cymru is must not be None.
         asn = 'NA' if cymru.asn == 'NA' else f'AS{cymru.asn}'
         return '\n'.join(['',
-            f'IP: {addr}',
-            f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck}[{proxycheck_type}] (ProxyCheck)',
-            f'CIDR: {cymru.prefix}',
-            f'Info: {asn} {cymru.owner}',
-        ])
+                          f'IP: {addr}',
+                          f'Reputation: {iphub} (IPHub), {vpnapi} (VPNAPI), {proxycheck}[{proxycheck_type}] (ProxyCheck)',
+                          f'CIDR: {cymru.prefix}',
+                          f'Info: {asn} {cymru.owner}',
+                          ])
     else:
         return '\n'.join(['',
-            f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}',
-            f'Result was: {result}'
-        ])
+                          f'{bcolors.FAIL}Error[main]: Failed to get data. {bcolors.ENDC}',
+                          f'Result was: {result}'
+                          ])
+
 
 async def loop_main():
     while True:
