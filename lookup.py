@@ -127,8 +127,8 @@ async def lookup(addr: str):
     cymru = result[0]
     iphub = getIPHubReputationColorized(result[1])
     vpnapi = getBoolColorized(result[2])
-    _proxycheck = proxycheck_type = result[3]
-    proxycheck = getBoolColorized(_proxycheck in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", 
+    proxycheck_type = result[3]
+    proxycheck = getBoolColorized(proxycheck_type in ["Hosting", "TOR", "SOCKS", "SOCKS4", "SOCKS4A", "SOCKS5", "SOCKS5H", 
                                   "Shadowsocks", "Compromised Server", "Inference Engine", "OpenVPN", "VPN"])
 
     if result[0] is not None:  # Cymru is must not be None.
